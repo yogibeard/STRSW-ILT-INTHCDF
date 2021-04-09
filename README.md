@@ -1,2 +1,2 @@
 # STRSW-ILT-INTHCDF
-Using NetApp Cloud Manager in Amazon Web Services
+Files for the labs for the course Using NetApp Cloud Manager in Amazon Web Services
