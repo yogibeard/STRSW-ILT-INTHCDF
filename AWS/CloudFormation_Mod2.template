@@ -1,0 +1,300 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Description": "This is for Module 2 Labs. This script creates a VPC, a public Subnet, a private subnet, an IGW, a NAT gateway, a win2k16 in the public subnet, a redhat in the private subnet",
+  "Parameters": {
+	"KeyName": {
+	"Description": "Name of an existing EC2 KeyPair to enable SSH access to the instance.",
+	"Type": "AWS::EC2::KeyPair::KeyName",
+	"ConstraintDescription": "must be the name of an existing EC2 KeyPair."
+	}  
+  },
+  "Resources": {
+    "PrimaryVPC": {
+      "Type": "AWS::EC2::VPC",
+      "Properties": {
+        "CidrBlock": "10.221.0.0/16",
+        "InstanceTenancy": "default",
+        "EnableDnsSupport": "true",
+        "EnableDnsHostnames": "false",
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": "PrimaryVPC"
+          }
+        ]
+      }
+    },
+	"PublicSubnet": {
+      "Type": "AWS::EC2::Subnet",
+      "Properties": {
+        "CidrBlock": "10.221.16.0/20",
+        "AvailabilityZone" : {
+            "Fn::Select" : [ "0", { "Fn::GetAZs" : "" } ]
+        },
+        "VpcId": {
+          "Ref": "PrimaryVPC"
+        },
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": "PublicSubnet"
+          }
+        ]
+      }
+    },
+    "PrivateSubnet": {
+      "Type": "AWS::EC2::Subnet",
+      "Properties": {
+        "CidrBlock": "10.221.0.0/20",
+        "AvailabilityZone" : {
+            "Fn::Select" : [ "1", { "Fn::GetAZs" : "" } ]
+        },
+        "VpcId": {
+          "Ref": "PrimaryVPC"
+        },
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": "PrivateSubnet"
+          }
+        ]
+      }
+    },
+    
+    "InternetGateway": {
+      "Type": "AWS::EC2::InternetGateway",
+      "Properties": {
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": "IGW"
+          }
+        ]
+      }
+    },
+	
+	"VPCInternetGatewayAttachment": {
+      "Type": "AWS::EC2::VPCGatewayAttachment",
+      "Properties": {
+        "VpcId": {
+          "Ref": "PrimaryVPC"
+        },
+        "InternetGatewayId": {
+          "Ref": "InternetGateway"
+        }
+      }
+    },
+	"EIP" : {
+		"Type" : "AWS::EC2::EIP",
+		"Properties" : {
+		   "Domain" : "PrimaryVPC"
+		}
+	},
+	
+	"NATGateway" : {
+	  "Type" : "AWS::EC2::NatGateway",
+	  "Properties" : {
+	    "AllocationId" : { "Fn::GetAtt" : ["EIP", "AllocationId"]},
+	    "SubnetId" : { "Ref" : "PublicSubnet"},
+	    "Tags" : [ 
+		   {
+		      "Key" : "Name", 
+			  "Value" : "NATGateway" 
+			  } 
+	     ]
+		}
+	},	
+	"PublicRT": {
+      "Type": "AWS::EC2::RouteTable",
+      "Properties": {
+        "VpcId": {
+          "Ref": "PrimaryVPC"
+        },
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": "PublicRT"
+          }
+        ]
+      }
+    },
+	
+    "RoutesInPublicRT": {
+      "Type": "AWS::EC2::Route",
+      "Properties": {
+        "DestinationCidrBlock": "0.0.0.0/0",
+        "RouteTableId": {
+          "Ref": "PublicRT"
+        },
+        "GatewayId": {
+          "Ref": "InternetGateway"
+        }
+      },
+      "DependsOn": "InternetGateway"
+    },
+	
+	
+	"PublicSubnetRTAssociation": {
+      "Type": "AWS::EC2::SubnetRouteTableAssociation",
+      "Properties": {
+        "RouteTableId": {
+          "Ref": "PublicRT"
+        },
+        "SubnetId": {
+          "Ref": "PublicSubnet"
+        }
+      }
+    },
+	
+	
+	"PrivateRT": {
+      "Type": "AWS::EC2::RouteTable",
+      "Properties": {
+        "VpcId": {
+          "Ref": "PrimaryVPC"
+        },
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": "PrivateRT"
+          }
+        ]
+      }
+    },
+	
+	"RoutesInPrivateRT": {
+	  "Type": "AWS::EC2::Route",
+	  "Properties": {
+         "RouteTableId" : { "Ref" : "PrivateRT" },
+         "DestinationCidrBlock" : "0.0.0.0/0",
+         "NatGatewayId" : { "Ref" : "NATGateway" }
+		}
+	},
+	
+	"PrivateSubnetRTAssociation": {
+      "Type": "AWS::EC2::SubnetRouteTableAssociation",
+      "Properties": {
+        "RouteTableId": {
+          "Ref": "PrivateRT"
+        },
+        "SubnetId": {
+          "Ref": "PrivateSubnet"
+        }
+      }
+    },
+	
+	"WindowsPublicInstance": {
+      "Type": "AWS::EC2::Instance",
+      "Properties": {
+        "DisableApiTermination": "false",
+        "InstanceInitiatedShutdownBehavior": "stop",
+        "ImageId": "ami-09540c9779b451713",
+        "InstanceType": "t2.micro",
+        "KeyName": { "Ref" : "KeyName" },
+        "Monitoring": "false",
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": "Win2k16_Public"
+          }
+        ],
+        "NetworkInterfaces": [
+          {
+            "DeleteOnTermination": "true",
+            "Description": "Primary network interface",
+            "DeviceIndex": 0,
+            "SubnetId": {
+              "Ref": "PublicSubnet"
+            },
+            "GroupSet": [
+              {
+                "Ref": "SGPublicWindowsInstances"
+              }
+            ],
+            "AssociatePublicIpAddress": "true"
+          }
+        ]
+      }
+    },
+	
+	"SGPublicWindowsInstances": {
+      "Type": "AWS::EC2::SecurityGroup",
+      "Properties": {
+        "GroupDescription": "security group for Windows EC2 instances in public subnet",
+		"Tags": [{"Key": "Name","Value": "SGPublicWindowsInstances"}],
+        "VpcId": {
+          "Ref": "PrimaryVPC"
+        }
+      }
+    },
+	
+	"Inbound1SGPublicWindowsInstances": {
+      "Type": "AWS::EC2::SecurityGroupIngress",
+      "Properties": {
+        "GroupId": {
+          "Ref": "SGPublicWindowsInstances"
+        },
+        "IpProtocol": "tcp",
+        "FromPort": "3389",
+        "ToPort": "3389",
+        "CidrIp": "0.0.0.0/0"
+      }
+    },
+    
+	"RHELPrivateInstance": {
+      "Type": "AWS::EC2::Instance",
+      "Properties": {
+        "DisableApiTermination": "false",
+        "InstanceInitiatedShutdownBehavior": "stop",
+        "ImageId": "ami-011b3ccf1bd6db744",
+        "InstanceType": "t2.micro",
+		"KeyName" : { "Ref" : "KeyName" },
+        "Monitoring": "false",
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": "Redhat_Private"
+          }
+        ],
+        "NetworkInterfaces": [
+          {
+            "DeleteOnTermination": "true",
+            "Description": "Primary network interface",
+            "DeviceIndex": 0,
+            "SubnetId": {
+              "Ref": "PrivateSubnet"
+            },
+            "GroupSet": [
+              {
+                "Ref": "SGPrivateRHELInstances"
+              }
+            ]
+          }
+        ]
+      }
+    },
+	
+	"SGPrivateRHELInstances": {
+      "Type": "AWS::EC2::SecurityGroup",
+      "Properties": {
+        "GroupDescription": "security group for RHEL EC2 instances in private subnet",
+		"Tags": [{"Key": "Name","Value": "SGPrivateRHELInstances"}],
+        "VpcId": {
+          "Ref": "PrimaryVPC"
+        }
+      }
+    },
+	"Inbound1SGPrivateRHELInstances": {
+      "Type": "AWS::EC2::SecurityGroupIngress",
+      "Properties": {
+        "GroupId": {
+          "Ref": "SGPrivateRHELInstances"
+        },
+        "IpProtocol": "tcp",
+        "FromPort": "22",
+        "ToPort": "22",
+        "CidrIp": "0.0.0.0/0"
+      }
+    }	
+}
+}

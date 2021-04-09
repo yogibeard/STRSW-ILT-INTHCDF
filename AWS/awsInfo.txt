@@ -1,0 +1,39 @@
+  
+AWS Keys:
+-------------
+
+
+AWS console login:
+-----------------
+
+username:	 
+password: 
+
+
+NetApp Cloud Central Account:
+---------------------------------
+username: 
+password: 
+Account name: 
+
+Redhat_Private:
+----------------
+Private IP: 
+
+
+Windows2k_Public:
+--------------------
+Public IP: 
+Private IP: 
+username: 
+Password:
+
+VPN Tunnel1 Outside IP Adress:
+----------------------------------
+
+
+Windows2k_Private:
+--------------------
+Private IP: 
+username: 
+Password: 
