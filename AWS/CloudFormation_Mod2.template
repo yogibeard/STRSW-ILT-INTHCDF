@@ -188,7 +188,7 @@
       "Properties": {
         "DisableApiTermination": "false",
         "InstanceInitiatedShutdownBehavior": "stop",
-        "ImageId": "ami-09540c9779b451713",
+        "ImageId": "ami-0484f9b6418b16d51",
         "InstanceType": "t2.micro",
         "KeyName": { "Ref" : "KeyName" },
         "Monitoring": "false",
@@ -246,7 +246,7 @@
       "Properties": {
         "DisableApiTermination": "false",
         "InstanceInitiatedShutdownBehavior": "stop",
-        "ImageId": "ami-011b3ccf1bd6db744",
+        "ImageId": "ami-0b0af3577fe5e3532",
         "InstanceType": "t2.micro",
 		"KeyName" : { "Ref" : "KeyName" },
         "Monitoring": "false",
